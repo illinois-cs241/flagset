@@ -16,3 +16,41 @@ The package itself doesn't have any dependencies on third-party packages
 ```
 pip install git+https://github.com/illinois-cs241/flagset
 ```
+
+Create a FlagSet object
+```
+fset = FlagSet(
+    {
+        "debug": Flag(
+            bool,
+            default=False,
+            cmdline_name=["-d", "--debug"],
+            help="enable debug mode",
+        ),
+        "token": Flag(
+            str,
+            required=True,
+            cmdline_name="--token",
+            help="access token",
+        ),
+        "bind_addr": Flag(
+            str,
+            default="localhost:8080",
+            cmdline_name="--bind-addr",
+            env_name="BIND_ADDR",
+            help="web app bind address",
+        ),
+        "mongodb_dsn": Flag(
+            str,
+            default="mongodb://localhost:27017",
+            config_name="some.path.in.the.config",
+            help="mongodb",
+        ),
+    }
+)
+```
+
+Then parse the given flags and config(args defaults to `sys.argv[1:]` and env defaults to `os.environ`)
+```
+config = fset.parse(args=[...], env={...}, ...)
+```
