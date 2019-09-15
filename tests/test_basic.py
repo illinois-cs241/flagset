@@ -68,3 +68,14 @@ class TestBasic(unittest.TestCase):
             use_exc=True,
         )
         self.assertEqual(flags["flag"], "from cmd")
+
+    def test_positional(self):
+        fset = FlagSet(
+            {"flag": Flag(cmdline_name="flag-name")}
+        )
+
+        flags = fset.parse(
+            args=["from_cmd"], use_exc=True
+        )
+        self.assertEqual(flags["flag"], "from_cmd")
+        self.assertNotIn("flag-name", flags)

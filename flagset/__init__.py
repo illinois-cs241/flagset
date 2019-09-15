@@ -59,6 +59,7 @@ class Flag:
         assert (
             cmdline_name is not None or env_name is not None or config_name is not None
         ), "expecting at least one flag name"
+
         assert (
             default is None or not required
         ), "cannot provide default value for required flag"
@@ -70,6 +71,9 @@ class Flag:
         self.default = default
         self.help = help
         self.required = required
+        self.positional = isinstance(cmdline_name, str) and not cmdline_name.startswith(
+            "-"
+        )
 
     def _parse_env(self, env):
         if self.env_name is not None and self.env_name in env:
@@ -87,7 +91,7 @@ class Flag:
 
         kwargs = {}
 
-        if dest is not None:
+        if dest is not None and not self.positional:
             kwargs["dest"] = dest
 
         # help message: <help>[. default value '<default>'][. env var '<env>']
@@ -157,8 +161,6 @@ class FlagSet:
         5. optional help message
     """
 
-    INTERNAL_FLAG_CONFIG = "config"
-
     def __init__(self, init_set={}):
         """
         :params config_parser: should take a string and return dict
@@ -179,7 +181,6 @@ class FlagSet:
         res = {}
 
         parser = _ArgumentParserWithException(add_help=False)
-        parser.add_argument("__config", nargs="?")
         parser.add_argument(
             "--help", "-h", dest="__help", action="store_true", default=False
         )
@@ -190,7 +191,19 @@ class FlagSet:
             if flag.cmdline_name is not None:
                 flag._bind_argparser(parser, canon)
 
+        # bind config flag last
+        parser.add_argument("__config", nargs="?")
+
         parsed = vars(parser.parse_args(args))
+
+        for canon, flag in self.flags.items():
+            if (
+                flag.positional
+                and flag.cmdline_name in parsed
+                and canon != flag.cmdline_name
+            ):
+                parsed[canon] = parsed[flag.cmdline_name]
+                del parsed[flag.cmdline_name]
 
         if parsed["__help"]:
             raise FlagHelp()
@@ -262,10 +275,11 @@ class FlagSet:
 
     def print_help(self):
         parser = argparse.ArgumentParser()
-        parser.add_argument("config", nargs="?", help="config file")
 
         for flag in self.flags.values():
             flag._bind_argparser(parser)
+
+        parser.add_argument("config", nargs="?", help="config file")
 
         parser.print_help(file=sys.stderr)
 
