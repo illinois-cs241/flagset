@@ -80,3 +80,5 @@ class TestBasic(unittest.TestCase):
         # calling with -h flag with missing positional argument should not yield error
         output = io.StringIO()
         flags = fset.parse(args=["-h"], help_output_file=output, use_exc=True)
+
+        print(output.getvalue())

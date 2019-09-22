@@ -97,29 +97,25 @@ class Flag:
         if dest is not None and not self.positional:
             kwargs["dest"] = dest
 
-        # help message: <help>[. default value '<default>'][. env var '<env>']
-        kwargs["help"] = self.help if self.help is not None else ""
+        # help messages: <sentence>[. <sentence> ...]
+        help_msgs = [self.help] if self.help is not None else []
+        alternatives = []
 
         if self.default is not None:
-            default_msg = "{}default value '{}'".format(
-                ". " if kwargs["help"] != "" else "", self.default
-            )
-
-            kwargs["help"] += default_msg
+            help_msgs.append("default value '{}'".format(self.default))
 
         if self.env_name is not None:
-            env_msg = "{}environment variable ${}".format(
-                ". " if kwargs["help"] != "" else "", self.env_name
-            )
-
-            kwargs["help"] += env_msg
+            alternatives.append("environment variable ${}".format(self.env_name))
 
         if self.config_name is not None:
-            config_msg = "{}config variable '{}'".format(
-                ". " if kwargs["help"] != "" else "", self.config_name
+            alternatives.append("config variable '{}'".format(self.config_name))
+
+        if alternatives:
+            help_msgs.append(
+                "alternatively, you can use {}".format(", or ".join(alternatives))
             )
 
-            kwargs["help"] += config_msg
+        kwargs["help"] = ". ".join(help_msgs)
 
         # allowed usages of boolean flags:
         # 1. --flag [t|true|yes|...|f|false|no|...]
@@ -164,11 +160,12 @@ class FlagSet:
         5. optional help message
     """
 
-    def __init__(self, init_set={}):
+    def __init__(self, init_set={}, version=None):
         """
         :params config_parser: should take a string and return dict
         """
         self.flags = init_set
+        self.version = version
 
     def add_flag(self, name, *args, **kwargs):
         assert name not in self.flags, "flag '{}' already exists".format(name)
