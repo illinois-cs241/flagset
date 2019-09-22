@@ -8,6 +8,9 @@ class _ArgumentParserWithException(argparse.ArgumentParser):
     def error(self, msg):
         raise FlagParseError(msg)
 
+    def print_help(self, file=None):
+        raise FlagHelp()
+
 
 class FlagParseError(Exception):
     pass
@@ -181,9 +184,7 @@ class FlagSet:
         res = {}
 
         parser = _ArgumentParserWithException(add_help=False)
-        parser.add_argument(
-            "--help", "-h", dest="__help", action="store_true", default=False
-        )
+        parser.add_argument("--help", "-h", dest="__help", action="help", default=False)
 
         for canon, flag in self.flags.items():
             res[canon] = None
@@ -204,9 +205,6 @@ class FlagSet:
             ):
                 parsed[canon] = parsed[flag.cmdline_name]
                 del parsed[flag.cmdline_name]
-
-        if parsed["__help"]:
-            raise FlagHelp()
 
         for canon in res:
             if canon in parsed:
@@ -234,6 +232,7 @@ class FlagSet:
         env=os.environ,
         config_parser=JSONFileParser,
         use_exc=False,
+        help_output_file=sys.stderr,
     ):
         try:
             cmdline_args, config_path = self._parse_cmdline(args)
@@ -265,15 +264,17 @@ class FlagSet:
             if use_exc:
                 raise e from None
             else:
-                self.print_help()
-                print("\nerror: {}".format(str(e)), file=sys.stderr)
+                self.print_help(help_output_file)
+                print("\nerror: {}".format(str(e)), file=help_output_file)
                 sys.exit(2)
 
         except FlagHelp:
-            self.print_help()
-            sys.exit(0)
+            self.print_help(help_output_file)
 
-    def print_help(self):
+            if not use_exc:
+                sys.exit(0)
+
+    def print_help(self, file=sys.stderr):
         parser = argparse.ArgumentParser()
 
         for flag in self.flags.values():
@@ -281,7 +282,7 @@ class FlagSet:
 
         parser.add_argument("config", nargs="?", help="config file")
 
-        parser.print_help(file=sys.stderr)
+        parser.print_help(file)
 
         # show other flags
         if {f for f in self.flags.values() if f.cmdline_name is None}:

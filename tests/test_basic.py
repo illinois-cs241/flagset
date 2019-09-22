@@ -1,3 +1,4 @@
+import io
 import unittest
 
 from flagset import Flag, FlagSet
@@ -75,3 +76,7 @@ class TestBasic(unittest.TestCase):
         flags = fset.parse(args=["from_cmd"], use_exc=True)
         self.assertEqual(flags["flag"], "from_cmd")
         self.assertNotIn("flag-name", flags)
+
+        # calling with -h flag with missing positional argument should not yield error
+        output = io.StringIO()
+        flags = fset.parse(args=["-h"], help_output_file=output, use_exc=True)
